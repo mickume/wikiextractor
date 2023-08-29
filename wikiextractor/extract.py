@@ -57,7 +57,7 @@ discardElements = [
 # wiktionary: Wiki dictionary
 # wikt: shortcut for Wiktionary
 #
-acceptedNamespaces = ['w', 'wiktionary', 'wikt']
+acceptedNamespaces = ['w', 'wiktionary', 'wikt', 'wikipedia', 'Wikipedia']
 
 
 def get_url(urlbase, uid):
@@ -197,7 +197,6 @@ def compact(text, mark_headers=False):
     listLevel = ''  # nesting of lists
 
     for line in text.split('\n'):
-
         if not line:
             if len(listLevel):    # implies Extractor.HtmlFormatting
                 for c in reversed(listLevel):
@@ -233,6 +232,9 @@ def compact(text, mark_headers=False):
         # handle indents
         elif line[0] == ':':
             page.append(line.lstrip(':'))
+        # handle lists for fandom
+        elif line[0].startswith("*"):
+            page.append(line.lstrip('*'))
         # handle lists
         # @see https://www.mediawiki.org/wiki/Help:Formatting
         elif line[0] in '*#;':
@@ -285,7 +287,6 @@ def compact(text, mark_headers=False):
             # # Drop preformatted
             # elif line[0] == ' ':
             #     continue
-
     return page
 
 
@@ -486,8 +487,10 @@ def replaceInternalLinks(text):
 
 def makeInternalLink(title, label):
     colon = title.find(':')
-    if colon > 0 and title[:colon] not in acceptedNamespaces:
-        return ''
+    if colon > 0 and title[:colon] in acceptedNamespaces:
+        return label
+    elif colon > 0 and title[:colon] not in acceptedNamespaces:
+        return ''    
     if colon == 0:
         # drop also :File:
         colon2 = title.find(':', colon + 1)
@@ -961,8 +964,8 @@ class Extractor():
 
         text = clean(self, text, expand_templates=expand_templates,
                      html_safe=html_safe)
-
         text = compact(text, mark_headers=mark_headers)
+
         return text
 
     def extract(self, out, html_safe=True):
@@ -973,10 +976,9 @@ class Extractor():
         logging.debug("%s\t%s", self.id, self.title)
         text = ''.join(self.page)
         text = self.clean_text(text, html_safe=html_safe)
-
         if self.to_json:
             json_data = {
-		'id': self.id,
+		        'id': self.id,
                 'revid': self.revid,
                 'url': self.url,
                 'title': self.title,
